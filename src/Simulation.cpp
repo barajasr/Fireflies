@@ -28,13 +28,11 @@ void Simulation::init() {
 	window.setPosition(sf::Vector2i(700, 100));
 	window.setVerticalSyncEnabled(true);
 	
-	auto color = turnToHSL(sf::Color::Yellow);
 	for (auto fly=fireflies.begin(), end=fireflies.end()-1; fly != end; ++fly) {
-		fly->color = color;
+		fly->color = turnToHSL(sf::Color(rgb(mt), rgb(mt), rgb(mt)));
 		fly->color.luminance = luminance(mt);
 		fly->position = {coordinate(mt), coordinate(mt), coordinate(mt)};
 		fly->velocity = {velComponent(mt), velComponent(mt), velComponent(mt)};
-
 	}
 
 	fireflies.back().color = turnToHSL(sf::Color::Red);
@@ -70,8 +68,9 @@ void Simulation::outOfBoundsCorrect(Firefly& fly) {
 void Simulation::run() {
 	init();
 
+	sf::Event event;
 	while (window.isOpen()) {
-		for (sf::Event event; window.pollEvent(event); )
+		while (window.pollEvent(event))
 			if (event.type == sf::Event::Closed)
 				window.close();
 
@@ -116,7 +115,7 @@ void Simulation::updateFly(const size_t index, const std::array<Firefly, firefly
 	for (size_t _index=0; _index < fireflyCount-1; ++_index) {
 		if (index != _index) {
 			const Firefly& secondFly{flies[_index]};
-			if (secondFly.color.luminance > fly.color.luminance && noneBrighter)
+			if (noneBrighter && secondFly.color.luminance > fly.color.luminance)
 				noneBrighter = false;
 
 			auto distance = fly.position - secondFly.position;

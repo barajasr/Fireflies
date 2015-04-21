@@ -7,11 +7,19 @@ SRC = src
 sources = $(wildcard $(SRC)/*.cpp)
 objects = $(sources:$(SRC)/%.cpp=$(OBJ)/%.o)
 
-debug =
+acc =
+lum =
+vel =
 CXXFLAGS = -std=c++1y -Wall -Wextra -O2 -pedantic -g
 LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system
-ifdef debug
-CXXFLAGS += -DDEBUG
+ifdef acc
+CXXFLAGS += -DACC
+endif
+ifdef lum
+CXXFLAGS += -DLUM
+endif
+ifdef vel
+CXXFLAGS += -DVEL
 endif
 
 all: $(target)

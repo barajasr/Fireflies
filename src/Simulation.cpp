@@ -86,13 +86,12 @@ void Simulation::sortByDepth() {
 }
 
 void Simulation::update() {
-	updateAvgFly();
-
 	const auto flies = fireflies;
 	for (size_t index=0; index != fireflyCount-1; ++index) {
 		updateFly(index, flies);
 	}
 
+	updateAvgFly();
 	sortByDepth();
 }
 
@@ -134,7 +133,13 @@ void Simulation::updateFly(const size_t index, const std::array<Firefly, firefly
 			                adjustment : -adjustment;
 		}
 	}
+#ifdef LUM
+std::cerr << "LUM: " << fly.color.luminance << " -> ";
+#endif
 	fly.color.modifyLuminance(lumAdjustment);
+#ifdef LUM
+std::cerr << fly.color.luminance << "\n";
+#endif
 	if (noneBrighter) {
 		fly.velocity = sf::Vector3f{velComponent(mt),
 		                            velComponent(mt),
@@ -144,7 +149,22 @@ void Simulation::updateFly(const size_t index, const std::array<Firefly, firefly
 
 	const float timePassed{fly.clock.getElapsedTime().asSeconds()};
 	fly.position += fly.velocity * timePassed;
+#ifdef ACC
+std::cerr << "\tACC: (" << acceleration.x
+          << ", " << acceleration.y
+          << ", " << acceleration.z << ")\n";
+#endif
+#ifdef VEL
+std::cerr << "\t\tVEL: (" << fly.velocity.x
+          << ", " << fly.velocity.y
+          << ", " << fly.velocity.z << ") -> ";
+#endif
 	fly.velocity += acceleration * timePassed;
+#ifdef VEL
+std::cerr << "(" << fly.velocity.x
+          << ", " << fly.velocity.y
+          << ", " << fly.velocity.z << ")\n";
+#endif
 	outOfBoundsCorrect(fly);
 	fly.clock.restart();
 }

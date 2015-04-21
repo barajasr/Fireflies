@@ -19,7 +19,6 @@ class Simulation {
 
 	std::mt19937        mt{201};
 	realDistribution    coordinate{0.f, 500.f};
-	intDistribution     rgb{0, 255};
 	intDistribution     luminance{0, 100};
 	realDistribution    velComponent{-10.5f, 10.5f};
 

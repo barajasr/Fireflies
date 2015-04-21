@@ -28,6 +28,7 @@ void Simulation::init() {
 	window.setPosition(sf::Vector2i(700, 100));
 	window.setVerticalSyncEnabled(true);
 	
+	intDistribution rgb{0, 255};
 	for (auto fly=fireflies.begin(), end=fireflies.end()-1; fly != end; ++fly) {
 		fly->color = turnToHSL(sf::Color(rgb(mt), rgb(mt), rgb(mt)));
 		fly->color.luminance = luminance(mt);

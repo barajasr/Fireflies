@@ -10,7 +10,7 @@ void Simulation::displayFireflies() {
 	const float radius = 4.f;
 	sf::CircleShape circle{radius, 40};
 	circle.setOrigin(radius/2.f, radius/2.f);
-	for (auto fly=fireflies.begin(); fly != fireflies.end(); ++fly) {
+	for (auto fly=fireflies.begin(), end=fireflies.end(); fly != end; ++fly) {
 		const float factor = (depth - fly->position.z ) / depth;
 		circle.setScale(factor, factor);
 		circle.setPosition(fly->position.x, fly->position.y);
@@ -24,7 +24,7 @@ void Simulation::displayFireflies() {
 void Simulation::init() {
 	window.create(sf::VideoMode(height, width),
 	              "Fireflies",
-	               sf::Style::Close | sf::Style::Titlebar);
+	              sf::Style::Close | sf::Style::Titlebar);
 	window.setPosition(sf::Vector2i(700, 100));
 	window.setVerticalSyncEnabled(true);
 	
@@ -35,16 +35,7 @@ void Simulation::init() {
 		fly->position = {coordinate(mt), coordinate(mt), coordinate(mt)};
 		fly->velocity = {velComponent(mt), velComponent(mt), velComponent(mt)};
 
-#ifdef DEBUG
-std::cerr << "(" << fly->color.hue
-          << ", " << fly->color.saturation
-          << ", " << fly->color.luminance << ")\n";
-#endif
 	}
-
-#ifdef DEBUG
-std::cerr << "===================================================\n";
-#endif
 
 	fireflies.back().color = turnToHSL(sf::Color::Red);
 	fireflies.back().velocity = {0.f, 0.f, 0.f};
@@ -95,6 +86,17 @@ void Simulation::sortByDepth() {
 }
 
 void Simulation::update() {
+	updateAvgFly();
+
+	const auto flies = fireflies;
+	for (size_t index=0; index != fireflyCount-1; ++index) {
+		updateFly(index, flies);
+	}
+
+	sortByDepth();
+}
+
+void Simulation::updateAvgFly() {
 	float luminance{0.0};
 	sf::Vector3f position{0.f, 0.f, 0.f};
 	for (auto fly=fireflies.begin(), end=fireflies.end()-1; fly != end; ++fly) {
@@ -105,74 +107,44 @@ void Simulation::update() {
 	auto& avgFly = fireflies.back();
 	avgFly.position = position / static_cast<float>(fireflyCount-1);
 	avgFly.color.luminance = luminance / (fireflyCount-1);
-
-	for (auto fly=fireflies.begin(), end=fireflies.end()-1; fly != end; ++fly) {
-		updateFly(*fly, luminance, position);
-	}
-	
-
-	sortByDepth();
-#ifdef DEBUG
-std::cerr << "++++++++++++++++++++++++++++++++++\n";
-#endif
 }
 
-void Simulation::updateFly(Firefly& fly, const float& luminance, const sf::Vector3f& position) {
-	static const size_t count = fireflyCount - 2;
-	const float avgX = (position.x - fly.position.x) / count;
-	const float avgY = (position.y - fly.position.y) / count;
-	const float avgZ = (position.z - fly.position.z) / count;
-	const float avgLuminance = (luminance - fly.color.luminance) / count;
+void Simulation::updateFly(const size_t index, const std::array<Firefly, fireflyCount>& flies) {
+	bool noneBrighter{true};
+	float lumAdjustment{0.f};
+	Firefly& fly{fireflies[index]};
+	sf::Vector3f acceleration{0.f, 0.f, 0.f};
+	for (size_t _index=0; _index < fireflyCount-1; ++_index) {
+		if (index != _index) {
+			const Firefly& secondFly{flies[_index]};
+			if (secondFly.color.luminance > fly.color.luminance && noneBrighter)
+				noneBrighter = false;
 
-#ifdef DEBUG
-std::cerr << "fly.color.luminance: " << fly.color.luminance
-		  << ", avgLuminance: " <<  avgLuminance << std::endl;
-#endif
+			auto distance = fly.position - secondFly.position;
+			const float distanceSquared = distance.x*distance.x + distance.y*distance.y + distance.z*distance.z;
+			const float length = sqrt(distanceSquared);
+			const float force = 100 / distanceSquared;
 
-	if (avgLuminance > fly.color.luminance) {
-		auto distance = fly.position - sf::Vector3f(avgX, avgY, avgZ);
-		const float distanceSquared = distance.x*distance.x + distance.y*distance.y + distance.z*distance.z;
-		const float length = sqrt(distanceSquared);
-		const float force = 100 / distanceSquared;
+			distance /= length;       // Make unit vector
+			distance *= force;        // Multiply by force=acceleration
+			acceleration += distance;
 
-		distance /= length; // Make unit vector
-		distance *= force;  // Multiply by force
-#ifdef DEBUG
-std::cerr << "\tdistance: (" << distance.x
-		  << ", " << distance.y
-		  << ", " << distance.z << ")\n"
-		  << "\tfly.velocity: (" << fly.velocity.x
-		  << ", " << fly.velocity.y
-		  << ", " << fly.velocity.z <<") -> ";
-#endif
-		fly.velocity += distance; // Apply force
-		fly.color.modifyLuminance(1/ (avgLuminance - fly.color.luminance));
-#ifdef DEBUG
-std::cerr << "(" << fly.velocity.x
-		  << ", " << fly.velocity.y
-		  << ", " << fly.velocity.z << ")\n";
-#endif
-	} else {
-		auto newVelocity = sf::Vector3f{velComponent(mt),
-										velComponent(mt),
-										velComponent(mt)};
-#ifdef DEBUG
-std::cerr << "\tnewVelocity: (" << newVelocity.x
-		  << ", " << newVelocity.y
-		  << ", " << newVelocity.z << ")\n";
-#endif
-		fly.velocity = newVelocity;
-		fly.color.modifyLuminance(1/ (avgLuminance - fly.color.luminance));
-
+			float adjustment = 1 / distanceSquared;
+			lumAdjustment+= secondFly.color.luminance > fly.color.luminance ?
+			                adjustment : -adjustment;
+		}
 	}
-#ifdef DEBUG
-std::cerr << "HSL: (" << fly.color.hue
-	  << ", " << fly.color.saturation
-	  << ", " << fly.color.luminance << ")\n";
-std::cerr << "----------------------------------\n";
-#endif
+	fly.color.modifyLuminance(lumAdjustment);
+	if (noneBrighter) {
+		fly.velocity = sf::Vector3f{velComponent(mt),
+		                            velComponent(mt),
+		                            velComponent(mt)};
+		acceleration = sf::Vector3f{0.f, 0.f, 0.f};
+	}
 
-	fly.position += fly.velocity * fly.clock.getElapsedTime().asSeconds();
+	const float timePassed{fly.clock.getElapsedTime().asSeconds()};
+	fly.position += fly.velocity * timePassed;
+	fly.velocity += acceleration * timePassed;
 	outOfBoundsCorrect(fly);
 	fly.clock.restart();
 }

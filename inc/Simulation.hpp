@@ -15,12 +15,12 @@ class Simulation {
 	const size_t        height{500};
 	const size_t        width{500};
 	const size_t        depth{500};
-	static const size_t fireflyCount{3}; // Additional 1 for average case
+	static const size_t fireflyCount{101}; // Additional 1 for average case
 
 	std::mt19937        mt{201};
 	realDistribution    coordinate{0.f, 500.f};
 	intDistribution     luminance{0, 100};
-	realDistribution    velComponent{-20.5f, 20.5f};
+	realDistribution    velComponent{-10.5f, 10.5f};
 
 	std::array<Firefly, fireflyCount> fireflies;
 	sf::RenderWindow                  window;
@@ -30,7 +30,8 @@ class Simulation {
 	void outOfBoundsCorrect(Firefly& fly);
 	void sortByDepth();
 	void update();
-	void updateFly(Firefly& fly, const float& luminance, const sf::Vector3f& position);
+	void updateAvgFly();
+	void updateFly(const size_t index, const std::array<Firefly, fireflyCount>& flies);
 
 	public:
 	Simulation() {}
